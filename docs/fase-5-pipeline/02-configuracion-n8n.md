@@ -89,7 +89,7 @@ Despues de crear la credencial, abrir cada nodo de PostgreSQL en el workflow y a
 
 ### 1. Crear el bot
 
-1. Abrir Telegram y buscar `@BotFather`
+1. Abrir [`@BotFather`](https://telegram.me/BotFather) en Telegram
 2. Enviar `/newbot`
 3. Elegir un nombre para el bot (ej: "Olist Pipeline Bot")
 4. Elegir un username (ej: `olist_pipeline_bot`)

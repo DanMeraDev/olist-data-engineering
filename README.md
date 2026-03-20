@@ -126,7 +126,7 @@ Para que el reporte automatico a Telegram funcione, n8n debe estar configurado *
 1. Abrir `http://localhost:5678` y crear una cuenta local
 2. Importar el workflow desde `n8n/olist_workflow.json`
 3. Configurar credenciales de PostgreSQL en n8n (host: `postgres`, puerto: `5432`)
-4. Crear bot de Telegram con `@BotFather`, obtener token y chat_id
+4. Crear bot de Telegram con [`@BotFather`](https://telegram.me/BotFather), obtener token y chat_id
 5. Configurar credenciales de Telegram en n8n
 6. Activar el workflow (toggle en la esquina superior derecha)
 
