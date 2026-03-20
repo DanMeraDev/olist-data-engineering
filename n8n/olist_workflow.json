@@ -1,5 +1,5 @@
 {
-  "name": "Olist Pipeline + Reporte Telegram",
+  "name": "olist_workflow",
   "nodes": [
     {
       "parameters": {
@@ -8,11 +8,15 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "webhook-trigger",
+      "id": "1b37175a-3225-457a-9464-9afef8669c7c",
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [220, 300]
+      "position": [
+        -784,
+        352
+      ],
+      "webhookId": "4acf572c-e610-49f8-ae35-8de5227fddde"
     },
     {
       "parameters": {
@@ -20,15 +24,18 @@
         "query": "SELECT COUNT(*) AS total_ordenes FROM orders",
         "options": {}
       },
-      "id": "test-connection",
+      "id": "4c5cc08e-653d-400e-9eb0-28a91553b2a9",
       "name": "Test DB Connection",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [440, 300],
+      "position": [
+        -576,
+        352
+      ],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Olist PostgreSQL"
+          "id": "pe4CMFK7R6fZ5C7Y",
+          "name": "Postgres account"
         }
       }
     },
@@ -38,15 +45,18 @@
         "query": "SELECT\n  COUNT(DISTINCT o.order_id) AS total_ordenes,\n  COUNT(DISTINCT c.customer_unique_id) AS total_clientes,\n  ROUND(SUM(oi.price + COALESCE(oi.freight_value, 0))::numeric, 2) AS revenue_total,\n  ROUND(AVG(oi.price + COALESCE(oi.freight_value, 0))::numeric, 2) AS ticket_promedio\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\nJOIN order_items oi ON o.order_id = oi.order_id",
         "options": {}
       },
-      "id": "query-kpis",
+      "id": "96c13fdf-3fea-4406-8e4e-1e52b807de31",
       "name": "Query KPIs",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [660, 200],
+      "position": [
+        80,
+        352
+      ],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Olist PostgreSQL"
+          "id": "pe4CMFK7R6fZ5C7Y",
+          "name": "Postgres account"
         }
       }
     },
@@ -56,15 +66,18 @@
         "query": "SELECT\n  p.category_name_english AS categoria,\n  ROUND(SUM(oi.price + COALESCE(oi.freight_value, 0))::numeric, 2) AS revenue\nFROM order_items oi\nJOIN products p ON oi.product_id = p.product_id\nGROUP BY p.category_name_english\nORDER BY revenue DESC\nLIMIT 5",
         "options": {}
       },
-      "id": "query-top-categorias",
+      "id": "717cc01a-b324-4007-9a1e-4a11426d14e2",
       "name": "Query Top Categorías",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [660, 400],
+      "position": [
+        -352,
+        352
+      ],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Olist PostgreSQL"
+          "id": "pe4CMFK7R6fZ5C7Y",
+          "name": "Postgres account"
         }
       }
     },
@@ -74,115 +87,164 @@
         "query": "SELECT\n  ROUND(AVG(EXTRACT(DAY FROM (delivered_customer_date::TIMESTAMP - purchase_timestamp::TIMESTAMP)))::numeric, 1) AS dias_entrega,\n  ROUND(COUNT(*) FILTER (WHERE status = 'canceled')::numeric / COUNT(*) * 100, 2) AS pct_canceladas,\n  ROUND((SELECT COUNT(*) FROM order_reviews WHERE review_score <= 2)::numeric / (SELECT COUNT(*) FROM order_reviews) * 100, 2) AS pct_reviews_negativas,\n  ROUND(COUNT(*) FILTER (WHERE delivered_customer_date::TIMESTAMP > estimated_delivery_date::DATE)::numeric / NULLIF(COUNT(*) FILTER (WHERE delivered_customer_date IS NOT NULL), 0) * 100, 2) AS pct_entregas_tardias\nFROM orders",
         "options": {}
       },
-      "id": "query-metricas",
+      "id": "9037a190-7f55-4758-8c87-9b5e088dd022",
       "name": "Query Métricas",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [660, 600],
+      "position": [
+        -128,
+        352
+      ],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Olist PostgreSQL"
+          "id": "pe4CMFK7R6fZ5C7Y",
+          "name": "Postgres account"
         }
       }
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// Obtener datos de los queries\nconst kpis = $('Query KPIs').first().json;\nconst categorias = $('Query Top Categorías').all().map(i => i.json);\nconst metricas = $('Query Métricas').first().json;\n\n// Formatear top categorías\nlet topCats = '';\nfor (let i = 0; i < categorias.length; i++) {\n  topCats += `   ${i+1}. ${categorias[i].categoria}: R$ ${Number(categorias[i].revenue).toLocaleString('pt-BR', {minimumFractionDigits: 2})}\\n`;\n}\n\n// Construir mensaje\nconst mensaje = `🛒 *OLIST E-COMMERCE — REPORTE*\n━━━━━━━━━━━━━━━━━━━━━━\n\n📊 *KPIs Generales*\n   Total Órdenes: ${Number(kpis.total_ordenes).toLocaleString()}\n   Clientes Únicos: ${Number(kpis.total_clientes).toLocaleString()}\n   Revenue Total: R$ ${Number(kpis.revenue_total).toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n   Ticket Promedio: R$ ${Number(kpis.ticket_promedio).toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n\n🏆 *Top 5 Categorías por Revenue*\n${topCats}\n📦 *Logística*\n   Tiempo promedio de entrega: ${metricas.dias_entrega} días\n   Entregas tardías: ${metricas.pct_entregas_tardias}%\n\n⚠️ *Incidencias*\n   Cancelaciones: ${metricas.pct_canceladas}%\n   Reviews negativas (1-2): ${metricas.pct_reviews_negativas}%\n\n━━━━━━━━━━━━━━━━━━━━━━\n🤖 Generado automáticamente por el pipeline Olist`;\n\nreturn [{ json: { mensaje } }];"
+        "jsCode": "const kpis = $('Query KPIs').first().json;\nconst categorias = $('Query Top Categorías').all().map(i => i.json);\nconst metricas = $('Query Métricas').first().json;\n\nlet topCats = '';\nfor (let i = 0; i < categorias.length; i++) {\n  const emoji = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][i];\n  topCats += `${emoji} ${categorias[i].categoria}: R$ ${Number(categorias[i].revenue).toLocaleString('pt-BR', {minimumFractionDigits: 2})}\\n`;\n}\n\nconst mensaje = `🛒 *OLIST E-COMMERCE — REPORTE*\n━━━━━━━━━━━━━━━━━━━━━━\n\n📊 *KPIs Generales*\n├ Total Órdenes: *${Number(kpis.total_ordenes).toLocaleString()}*\n├ Clientes Únicos: *${Number(kpis.total_clientes).toLocaleString()}*\n├ Revenue Total: *R$ ${Number(kpis.revenue_total).toLocaleString('pt-BR', {minimumFractionDigits: 2})}*\n└ Ticket Promedio: *R$ ${Number(kpis.ticket_promedio).toLocaleString('pt-BR', {minimumFractionDigits: 2})}*\n\n🏆 *Top 5 Categorías por Revenue*\n${topCats}\n📦 *Logística y Entregas*\n├ Tiempo promedio de entrega: *${metricas.dias_entrega} días*\n├ Entregas tardías: *${metricas.pct_entregas_tardias}%*\n└ Entregas a tiempo: *${(100 - Number(metricas.pct_entregas_tardias)).toFixed(2)}%*\n\n⚠️ *Incidencias y Satisfacción*\n├ Cancelaciones: *${metricas.pct_canceladas}%*\n├ Reviews negativas (1-2): *${metricas.pct_reviews_negativas}%*\n└ Reviews positivas (4-5): *${(100 - Number(metricas.pct_reviews_negativas)).toFixed(1)}%*\n\n💡 *Insights Clave*\n- La insatisfacción real (~15%) es 10x mayor que las cancelaciones (0.6%)\n- El cuello de botella logístico está en el tránsito (${metricas.dias_entrega} días promedio)\n- health\\\\_beauty lidera en revenue pero bed\\\\_bath\\\\_table en volumen de órdenes\n\n━━━━━━━━━━━━━━━━━━━━━━\n📈 *Dashboard interactivo:*\nhttp://localhost:8501\n\n🤖 _Generado automáticamente por el pipeline Olist_`;\n\nreturn [{ json: { mensaje } }];"
       },
-      "id": "format-message",
+      "id": "d74717a9-cdef-4264-8ad6-3d8a119887cd",
       "name": "Formatear Mensaje",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 400]
+      "position": [
+        256,
+        352
+      ]
     },
     {
       "parameters": {
-        "chatId": "TU_CHAT_ID",
+        "chatId": "TU_CHATID",
         "text": "={{ $json.mensaje }}",
         "additionalFields": {
+          "appendAttribution": false,
           "parse_mode": "Markdown"
         }
       },
-      "id": "send-telegram",
+      "id": "8b8f3df4-b4f9-4742-86d2-4660aa557ef9",
       "name": "Enviar a Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1100, 400],
+      "position": [
+        448,
+        352
+      ],
+      "webhookId": "e8537bb4-f5ca-4bbc-beb0-c6d34df85a66",
       "credentials": {
         "telegramApi": {
-          "id": "TELEGRAM_CREDENTIAL_ID",
-          "name": "Olist Telegram Bot"
+          "id": "MVdoDkFxidDCG59j",
+          "name": "Telegram account"
         }
       }
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ status: 'ok', mensaje: 'Reporte enviado a Telegram' }) }}"
+        "responseBody": "={{ JSON.stringify({ status: 'ok', mensaje: 'Reporte enviado a Telegram' }) }}",
+        "options": {}
       },
-      "id": "respond-webhook",
+      "id": "438dac31-fec7-469c-9309-489136a6f05a",
       "name": "Responder Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1320, 400]
+      "position": [
+        656,
+        352
+      ]
     }
   ],
+  "pinData": {},
   "connections": {
     "Webhook Trigger": {
       "main": [
         [
-          { "node": "Test DB Connection", "type": "main", "index": 0 }
+          {
+            "node": "Test DB Connection",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Test DB Connection": {
       "main": [
         [
-          { "node": "Query KPIs", "type": "main", "index": 0 },
-          { "node": "Query Top Categorías", "type": "main", "index": 0 },
-          { "node": "Query Métricas", "type": "main", "index": 0 }
+          {
+            "node": "Query Top Categorías",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Query KPIs": {
       "main": [
         [
-          { "node": "Formatear Mensaje", "type": "main", "index": 0 }
+          {
+            "node": "Formatear Mensaje",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Query Top Categorías": {
       "main": [
         [
-          { "node": "Formatear Mensaje", "type": "main", "index": 0 }
+          {
+            "node": "Query Métricas",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Query Métricas": {
       "main": [
         [
-          { "node": "Formatear Mensaje", "type": "main", "index": 0 }
+          {
+            "node": "Query KPIs",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Formatear Mensaje": {
       "main": [
         [
-          { "node": "Enviar a Telegram", "type": "main", "index": 0 }
+          {
+            "node": "Enviar a Telegram",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Enviar a Telegram": {
       "main": [
         [
-          { "node": "Responder Webhook", "type": "main", "index": 0 }
+          {
+            "node": "Responder Webhook",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }
   },
+  "active": true,
   "settings": {
     "executionOrder": "v1"
-  }
+  },
+  "versionId": "abebf469-78c1-4fe9-bd55-6966e9e5e2a3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "203fda3d882d7f64266d6eae3d8f0ebae675ec181ae966f800dd0fa0b1c3a2ce"
+  },
+  "id": "MWjVq90uifkYXxOM",
+  "tags": []
 }

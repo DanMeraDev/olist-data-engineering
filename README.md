@@ -86,7 +86,7 @@ Toda la documentacion detallada se encuentra en la carpeta `docs/`. Cada carpeta
 ### 1. Clonar el repositorio
 
 ```bash
-git clone <url-del-repositorio>
+git clone https://github.com/DanMeraDev/olist-data-engineering.git
 cd olist-data-engineering
 ```
 
@@ -96,7 +96,8 @@ Los 9 CSVs originales de Kaggle ya estan incluidos en `data/raw/`, no es necesar
 
 ```bash
 python -m venv venv
-source venv/Scripts/activate    # En Git Bash (Windows)
+source venv/Scripts/activate    # Windows (Git Bash)
+source venv/bin/activate        # macOS / Linux
 pip install -r requirements.txt
 ```
 
